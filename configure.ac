@@ -152,7 +152,7 @@ AC_SUBST(COPY_SZIP)
   
   #############################################
   
-ROS3_VFD=yes
+ROS3_VFD=no
 if test "X$ROS3_VFD" = "Xyes"; then
     AC_CHECK_HEADERS([curl/curl.h],, [unset ROS3_VFD])
     AC_CHECK_HEADERS([openssl/evp.h],, [unset ROS3_VFD])

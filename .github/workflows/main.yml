@@ -19,10 +19,18 @@ jobs:
       fail-fast: false
       matrix:
         config:
-        - { os: windows-2022, bioc-version: 'devel'}
-        - { os: macOS-latest, bioc-version: 'devel'}
-        - { os: ubuntu-20.04, bioc-version: 'devel', system-libs: 'libcurl4-gnutls-dev libaec-dev'}
-        - { os: ubuntu-22.04, bioc-version: 'devel', system-libs: 'libcurl4-openssl-dev'}
+          - { os: windows-2022, bioc-version: 'devel' }
+          - { os: macOS-latest, bioc-version: 'devel' }
+          - {
+              os: ubuntu-20.04,
+              bioc-version: 'devel',
+              system-libs: 'libcurl4-gnutls-dev libaec-dev',
+            }
+          - {
+              os: ubuntu-22.04,
+              bioc-version: 'devel',
+              system-libs: 'libcurl4-openssl-dev',
+            }
 
     steps:
       - name: Configure git
@@ -33,20 +41,20 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
         run: |
           sudo apt-get update && sudo apt-get install ${{ matrix.config.system-libs }}
-          
+
       - name: Install Mac system libraries
         if: ${{ matrix.config.os == 'macOS-latest' }}
         run: |
           brew install libgit2
-          
+
       - uses: actions/checkout@v3
-          
+
       - name: Setup R and Bioconductor
         uses: grimbough/bioc-actions/setup-bioc@v1
         with:
           bioc-version: ${{ matrix.config.bioc-version }}
           bioc-mirror: https://ftp.gwdg.de/pub/misc/bioconductor
-          
+
       - name: Create Makevars
         if: ${{ matrix.config.os == 'macOS-latest' }}
         run: |
@@ -59,35 +67,41 @@ jobs:
       - name: Install dependencies
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
-        ## install BiocCheck here so it is cached
+          ## install BiocCheck here so it is cached
           extra-packages: |
             bioc::BiocCheck
-        
+
       - name: Bioc - Build, Install, Check
         id: build-install-check
         uses: grimbough/bioc-actions/build-install-check@v1
-        
+
       - name: Run BiocCheck
         uses: grimbough/bioc-actions/run-BiocCheck@v1
         with:
           error-on: 'never'
-          arguments: '--no-check-bioc-help' 
-      
+          arguments: '--no-check-bioc-help'
+
       - name: Session info
         run: |
           sessionInfo()
         shell: Rscript {0}
-        
+
       - name: Upload check results
         if: always()
         uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.config.os }}-results
           path: ${{ steps.build-install-check.outputs.check-dir }}
-          
+
       - name: Upload check results
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.config.os }}-${{ matrix.config.r }}-hdf5_config.log
           path: check/*.Rcheck/00_pkg_src/Rhdf5lib/src/hdf5/config.log
+
+      - name: Install package
+        if: always()
+        run: |
+          devtools::install(args = "--configure-args=--disable-ros3-vfd")
+        shell: Rscript {0}
